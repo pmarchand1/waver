@@ -2,6 +2,8 @@ Package: waver
 Type: Package
 Title: Calculate Fetch and Wave Energy
 Version: 0.1.0
+Depends: R (>= 3.2.2), sp
+Imports: geosphere, rgeos
 Date: 2015-09-24
 Authors@R: as.person(c(
         "Philippe Marchand <pmarchand@sesync.org> [aut, cre]",
