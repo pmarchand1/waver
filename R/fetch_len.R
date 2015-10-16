@@ -50,7 +50,8 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
 
     if (all(spread == 0)) {
         # if no sub-bearings, just return distance to shore for each bearing
-        sapply(bearings, function(b) dist_shore(p, shore_clip, b, dmax))
+        fetch_res <- sapply(bearings,
+                            function(b) dist_shore(p, shore_clip, b, dmax))
     } else {
         # calculate the distance to shore for each sub-bearing
         bear_mat <- outer(bearings, spread, "+")
@@ -61,8 +62,28 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
         #  with weights proportional to the cosine (relative to their main bearing)
         weights <- cospi(spread / 180)
         weights <- weights / sum(weights)
-        dists %*% weights
+        fetch_res <- as.vector(dists %*% weights)
     }
+
+    names(fetch_res) <- as.character(bearings)
+    fetch_res
+}
+
+
+# Calculate the fetch length for multiple points
+# Right now pts can only be a matrix
+#' @export
+fetch_len_multi <- function(pts, bearings, shoreline, dmax, spread = 0) {
+    # Clip shoreline to a merged buffer around all points
+    rect_list <- apply(pts, 1, get_clip_rect, dmax)
+    rect_buf <- do.call(rbind, c(rect_list, makeUniqueIDs = TRUE))
+    rect_buf <- rgeos::gUnaryUnion(rect_buf)
+    sub_shore <- rgeos::gIntersection(shoreline, rect_buf, byid = TRUE)
+
+    # Calculate fetch for all points and return a (points x bearings) matrix
+    fetch_res <- t(apply(pts, 1, fetch_len, bearings, sub_shore, dmax, spread))
+    colnames(fetch_res) <- as.character(bearings)
+    fetch_res
 }
 
 
