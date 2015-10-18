@@ -1,3 +1,6 @@
+### TODO: check inputs to fetch_len, check if any point is in water
+
+
 #' Calculate the fetch length around a point
 #'
 #' Given a point, a shoreline layer and a vector of wind directions (bearings),
@@ -5,7 +8,7 @@
 #'
 #' The fetch length (or fetch) is the distance of open water over which the wind
 #' can blow in a specific direction. Note that bearings represent the direction
-#' where the wind originates.
+#' from where the wind originates.
 #'
 #' The optional \code{spread} argument defines relative directions that are
 #' added to each main bearing to produce a set of sub-bearings. The fetch lengths
@@ -31,8 +34,8 @@
 #'  within a distance of \code{dmax} from a given bearing.
 #' @param spread Vector of relative bearings (in degrees) for which
 #'  to calculate fetch around each main bearing (see details).
-#' @return A vector representing the fetch length for each direction given in
-#'  \code{bearings}.
+#' @return A named vector representing the fetch length for each direction
+#'  given in \code{bearings}.
 #'
 #' @export
 fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
@@ -44,9 +47,23 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
     clip_rect <- get_clip_rect(p, dmax)
     shore_clip <- rgeos::gIntersection(shoreline, clip_rect, byid = TRUE)
     # If no land within rectangle, return dmax for all bearings
-    if (is.null(shore_clip)) return(rep(dmax, length(bearings)))
-    # Convert shoreline from polygon to line (to get line-line intersections below)
-    shore_clip <- as(shore_clip, "SpatialLines")
+    if (is.null(shore_clip) || is(shore_clip, "SpatialPoints")) {
+        return(rep(dmax, length(bearings)))
+    }
+
+    # Convert any polygons to lines to get line-line intersections later
+    if (is(shore_clip, "SpatialPolygons")) {
+        shore_clip <- as(shore_clip, "SpatialLines")
+    } else if (is(shore_clip, "SpatialCollections")) {
+        if (!is.null(shore_clip@polyobj)) {
+            shore_clip <- rbind(as(shore_clip@polyobj, "SpatialLines"),
+                                shore_clip@lineobj)
+        } else if (!is.null(shore_clip@lineobj)) {
+            shore_clip <- shore_clip@lineobj
+        } else {  # no land in buffer
+            return(rep(dmax, length(bearings)))
+        }
+    }
 
     if (all(spread == 0)) {
         # if no sub-bearings, just return distance to shore for each bearing
