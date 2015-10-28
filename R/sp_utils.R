@@ -13,3 +13,13 @@ lines_to_endpts <- function(slines) {
                           function(x) matrix(unlist(x), 2, 2))
     do.call(rbind, endpts_list)
 }
+
+# Create a SpatialLines starting at p, of length len,
+#  along given bearing (in degrees)
+bearing_line <- function(p, bearing, len) {
+    l1 <- Line(rbind(
+        coordinates(p),
+        coordinates(p) + len * c(cospi(bearing / 180), sinpi(bearing / 180))
+    ))
+    SpatialLines(list(Lines(list(l1), ID = 1)), CRS(proj4string(p)))
+}

@@ -1,4 +1,5 @@
 ### TODO: check inputs to fetch_len, check if any point is in water
+###  replace sapply with vapply
 
 
 #' Calculate the fetch length around a point
