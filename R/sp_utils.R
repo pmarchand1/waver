@@ -19,7 +19,7 @@ lines_to_endpts <- function(slines) {
 bearing_line <- function(p, bearing, len) {
     l1 <- Line(rbind(
         coordinates(p),
-        coordinates(p) + len * c(cospi(bearing / 180), sinpi(bearing / 180))
+        coordinates(p) + len * c(sinpi(bearing / 180), cospi(bearing / 180))
     ))
     SpatialLines(list(Lines(list(l1), ID = 1)), CRS(proj4string(p)))
 }
