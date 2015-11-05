@@ -33,6 +33,22 @@
 #'
 #' @export
 fetch_len_proj <- function(p, bearings, shoreline, dmax, spread = 0) {
+    # Check inputs
+    if (!is(p, "SpatialPoints") || length(p) != 1) {
+       stop("p must be a SpatialPoints* object of length 1.")
+    }
+    if (!(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons"))) {
+        stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
+    }
+    if (proj4string(p) != proj4string(shorline)) {
+        stop("projections of p and shoreline do not match.")
+    }
+    if (!is.vector(bearings, "numeric")) stop("bearings must be a numeric vector.")
+    if (!is.vector(spread, "numeric")) stop("spread must be a numeric vector.")
+    if (!is.vector(dmax, "numeric") || length(dmax) != 1) {
+        stop("dmax must be a single number.")
+    }
+
     # Clip shoreline layer to a rectangle around point
     # to guarantee at least dmax on each side
     clip_rect <- get_clip_rect_proj(p, dmax)

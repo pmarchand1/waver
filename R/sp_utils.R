@@ -1,5 +1,4 @@
-# Some utility functions to create / manipulate spatial objects
-# (not exported)
+#### Some utility functions to create / manipulate spatial objects (not exported)
 
 # Create a Polygon object corresponding to rectangle with given coords
 poly_rect <- function(xmin, ymin, xmax, ymax) {

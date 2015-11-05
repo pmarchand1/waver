@@ -1,5 +1,4 @@
-### TODO: check inputs to fetch_len, check if any point is in water
-###  replace sapply with vapply
+### TODO: check inputs to fetch_len_multi and document, check if any point is in water
 
 
 #' Calculate the fetch length around a point
@@ -40,9 +39,29 @@
 #'
 #' @export
 fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
-    # Convert p to vector if necessary
-    if (is.matrix(p)) p <- as.vector(p)
-    if (is(p, "SpatialPoints")) p <- as.vector(coordinates(p))
+    # Check p and convert to vector if necessary
+    if (is(p, "SpatialPoints")) {
+        if (length(p) != 1) stop("p must be a single point.")
+        p <- as.vector(coordinates(p))
+    } else {
+        if (!is.numeric(p)) stop("non-numeric coordinates given for p.")
+        if (length(p) != 2) {
+            stop("p must be the lat/lon coordinates of a single point.")
+        }
+        if (is.matrix(p)) {
+            p <- as.vector(p)
+        }
+    }
+    # Check other inputs
+    if (!(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons"))) {
+        stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
+    }
+    if (!is.vector(bearings, "numeric")) stop("bearings must be a numeric vector.")
+    if (!is.vector(spread, "numeric")) stop("spread must be a numeric vector.")
+    if (!is.vector(dmax, "numeric") || length(dmax) != 1) {
+        stop("dmax must be a single number.")
+    }
+
     # Clip shoreline layer to a rectangle around point
     # to guarantee at least dmax on each side
     clip_rect <- get_clip_rect(p, dmax)
@@ -68,13 +87,13 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
 
     if (all(spread == 0)) {
         # if no sub-bearings, just return distance to shore for each bearing
-        fetch_res <- sapply(bearings,
-                            function(b) dist_shore(p, shore_clip, b, dmax))
+        fetch_res <- vapply(bearings,
+                            function(b) dist_shore(p, shore_clip, b, dmax), 0)
     } else {
         # calculate the distance to shore for each sub-bearing
         bear_mat <- outer(bearings, spread, "+")
-        dists <- sapply(bear_mat,
-                        function(b) dist_shore(p, shore_clip, b, dmax))
+        dists <- vapply(bear_mat,
+                        function(b) dist_shore(p, shore_clip, b, dmax), 0)
         dim(dists) <- dim(bear_mat)
         # return weighted means of the sub-bearing fetch values
         #  with weights proportional to the cosine (relative to their main bearing)
@@ -105,13 +124,13 @@ fetch_len_multi <- function(pts, bearings, shoreline, dmax, spread = 0) {
 }
 
 
-# Helper functions below are not exported by the package
+#### Helper functions below are not exported by the package ####
 
 # Constant for longlat WGS projection
 plonglat <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 # Create clipping rectangle around point p (long, lat)
-#   to guarantee at least dmax (in m) on each side
+#  to guarantee at least dmax (in m) on each side
 get_clip_rect <- function(p, dmax) {
     lat_dist <- 111600 # approx. distance (in m) between degrees of latitude
     long <- p[1]
