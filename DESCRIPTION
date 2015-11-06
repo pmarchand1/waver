@@ -12,3 +12,4 @@ Authors@R: as.person(c(
 Description: [to be added later]
 License: GPL-3
 LazyData: TRUE
+Suggests: testthat
