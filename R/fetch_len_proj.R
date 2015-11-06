@@ -30,7 +30,8 @@
 #'  to calculate fetch around each main bearing (see details).
 #' @return A named vector representing the fetch length for each direction
 #'  given in \code{bearings}.
-#'
+#' @seealso \code{\link{fetch_len}} to work in geographic (unprojected)
+#'  coordinates.
 #' @export
 fetch_len_proj <- function(p, bearings, shoreline, dmax, spread = 0) {
     # Check inputs
@@ -40,7 +41,7 @@ fetch_len_proj <- function(p, bearings, shoreline, dmax, spread = 0) {
     if (!(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons"))) {
         stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
     }
-    if (proj4string(p) != proj4string(shorline)) {
+    if (proj4string(p) != proj4string(shoreline)) {
         stop("projections of p and shoreline do not match.")
     }
     if (!is.vector(bearings, "numeric")) stop("bearings must be a numeric vector.")

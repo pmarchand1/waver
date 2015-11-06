@@ -45,4 +45,8 @@ If the shoreline layer is given as SpatialPolygons*, the function verifies
 that the input point is outside all polygons (i.e. in water). If this is
 not the case, it issues a warning and returns a vector of \code{NA}.
 }
+\seealso{
+\code{\link{fetch_len}} to work in geographic (unprojected)
+ coordinates.
+}
 

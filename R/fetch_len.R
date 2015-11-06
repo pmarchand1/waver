@@ -1,5 +1,4 @@
-### TODO: check inputs to fetch_len_multi and document, check if any point is in water
-
+### TODO: check if any point is in water
 
 #' Calculate the fetch length around a point
 #'
@@ -36,7 +35,9 @@
 #'  to calculate fetch around each main bearing (see details).
 #' @return A named vector representing the fetch length for each direction
 #'  given in \code{bearings}.
-#'
+#' @seealso \code{\link{fetch_len_proj}} to work in projected coordinates.
+#' @seealso \code{\link{fetch_len_multi}} for an efficient alternative when
+#'  computing fetch length for multiple points.
 #' @export
 fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
     # Check p and convert to vector if necessary
@@ -46,7 +47,7 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
     } else {
         if (!is.numeric(p)) stop("non-numeric coordinates given for p.")
         if (length(p) != 2) {
-            stop("p must be the lat/lon coordinates of a single point.")
+            stop("p must be the long/lat coordinates of a single point.")
         }
         if (is.matrix(p)) {
             p <- as.vector(p)
@@ -107,10 +108,37 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
 }
 
 
-# Calculate the fetch length for multiple points
-# Right now pts can only be a matrix
+#' Calculate the fetch length for multiple points
+#'
+#' \code{fetch_len_multi} provides an efficient method to compute fetch length
+#' for multiple points.
+#'
+#' This function clips the \code{shoreline} layer to a rectangle around each
+#'  point in \code{pts} before applying \code{\link{fetch_len}} to all points.
+#'  This saves computation time if points of interest are spatially clustered
+#'  and their rectangular buffers overlap.
+#'
+#' @param pts Coordinates of the points from which to calculate fetch, in degrees.
+#'  Either a matrix of two columns (longitude, latitude) or a SpatialPoints* object.
+#' @param bearings Vector of bearings, in degrees.
+#' @param shoreline SpatialLines* or SpatialPolygons* object representing the
+#'  shoreline.
+#' @param dmax Maximum value of fetch length, returned if there is no land
+#'  within a distance of \code{dmax} from a given bearing.
+#' @param spread Vector of relative bearings (in degrees) for which
+#'  to calculate fetch around each main bearing (see \code{\link{fetch_len}}
+#'  for details).
+#' @return A matrix of fetch lengths, with one row by point in \code{pts} and
+#'  one column by bearing in \code{bearings}.
 #' @export
 fetch_len_multi <- function(pts, bearings, shoreline, dmax, spread = 0) {
+    # Check that pts is nx2 matrix or SpatialPoints (if latter, convert to matrix)
+    if (is(pts, "SpatialPoints")) {
+        pts <- coordinates(pts)
+    } else if (!is.matrix(pts) || ncol(pts) != 2) {
+        stop("pts matrix must have two columns (long, lat).")
+    }
+
     # Clip shoreline to a merged buffer around all points
     rect_list <- apply(pts, 1, get_clip_rect, dmax)
     rect_buf <- do.call(rbind, c(rect_list, makeUniqueIDs = TRUE))
