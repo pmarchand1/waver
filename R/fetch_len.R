@@ -1,4 +1,3 @@
-### TODO: check if any point is in water
 
 #' Calculate the fetch length around a point
 #'
@@ -61,6 +60,18 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
     if (!is.vector(spread, "numeric")) stop("spread must be a numeric vector.")
     if (!is.vector(dmax, "numeric") || length(dmax) != 1) {
         stop("dmax must be a single number.")
+    }
+
+    # If shoreline is a polygons (land) layer, check that point is not on land
+    if (is(shoreline, "SpatialPolygons")) {
+        # Note: 'as' only to remove DataFrame part of SpatialPoly if there's one
+        in_water <- is.na(over(
+            SpatialPoints(matrix(p, nrow = 1), proj4string = CRS(plonglat)),
+            as(shoreline, "SpatialPolygons")))
+        if(!in_water) {
+            warning("point on land, returning NA")
+            return(rep(NA, length(bearings)))
+        }
     }
 
     # Clip shoreline layer to a rectangle around point

@@ -50,6 +50,17 @@ fetch_len_proj <- function(p, bearings, shoreline, dmax, spread = 0) {
         stop("dmax must be a single number.")
     }
 
+    # If shoreline is a polygons (land) layer, check that point is not on land
+    if (is(shoreline, "SpatialPolygons")) {
+        # Note: 'as' only to remove DataFrame part of Spatial objects
+        in_water <- is.na(over(as(p, "SpatialPoints"),
+                               as(shoreline, "SpatialPolygons")))
+        if(!in_water) {
+            warning("point on land, returning NA")
+            return(rep(NA, length(bearings)))
+        }
+    }
+
     # Clip shoreline layer to a rectangle around point
     # to guarantee at least dmax on each side
     clip_rect <- get_clip_rect_proj(p, dmax)
