@@ -4,12 +4,11 @@
 \alias{fetch_len}
 \title{Calculate the fetch length around a point}
 \usage{
-fetch_len(p, bearings, shoreline, dmax, spread = 0)
+fetch_len(p, bearings, shoreline, dmax, spread = 0, projected = FALSE,
+  check_inputs = TRUE)
 }
 \arguments{
-\item{p}{Coordinates of the point from which to calculate fetch, in degrees.
-Either a vector of two numbers, a matrix of two columns (longitude,
-latitude), or a SpatialPoints* object.}
+\item{p}{SpatialPoints* object of length 1 (single point).}
 
 \item{bearings}{Vector of bearings, in degrees.}
 
@@ -21,6 +20,12 @@ within a distance of \code{dmax} from a given bearing.}
 
 \item{spread}{Vector of relative bearings (in degrees) for which
 to calculate fetch around each main bearing (see details).}
+
+\item{projected}{Should projected coordinates be used to calculate fetch?}
+
+\item{check_inputs}{Should the validity of inputs be checked? It is
+recommended to keep this TRUE, unless this function is called repeatedly from
+another function that already checks inputs.}
 }
 \value{
 A named vector representing the fetch length for each direction
@@ -41,17 +46,20 @@ calculated for each sub-bearing are averaged with weights proportional to
 \code{cos(spread)}. By default, \code{spread = 0} and fetch length is
 calculated for the main bearings only.
 
-This function converts all Spatial* objects to WGS84 geographic
-(longitude, latitude) coordinates and calculates geodesic distances using
-the Vincenty ellipsoid formula (from the geosphere R package).
+If \code{projected} is FALSE (the default), the input data must be in WGS84
+geographic (longitude, latitude) coordinates. Geodesic distances are calculated
+using the Vincenty ellipsoid formula from the geosphere R package. All
+distance are expressed in meters.
+
+If \code{projected} is TRUE, the input data (\code{p} and \code{shoreline})
+must share the same projection. Projected distances are calculated with the
+rgeos R package. All distances are expressed in the projection's coordinates.
 
 If the shoreline layer is given as SpatialPolygons*, the function verifies
 that the input point is outside all polygons (i.e. in water). If this is
 not the case, it issues a warning and returns a vector of \code{NA}.
 }
 \seealso{
-\code{\link{fetch_len_proj}} to work in projected coordinates.
-
 \code{\link{fetch_len_multi}} for an efficient alternative when
  computing fetch length for multiple points.
 }

@@ -4,11 +4,11 @@
 \alias{fetch_len_multi}
 \title{Calculate the fetch length for multiple points}
 \usage{
-fetch_len_multi(pts, bearings, shoreline, dmax, spread = 0)
+fetch_len_multi(pts, bearings, shoreline, dmax, spread = 0,
+  projected = FALSE)
 }
 \arguments{
-\item{pts}{Coordinates of the points from which to calculate fetch, in degrees.
-Either a matrix of two columns (longitude, latitude) or a SpatialPoints* object.}
+\item{pts}{A SpatialPoints* object.}
 
 \item{bearings}{Vector of bearings, in degrees.}
 
@@ -19,8 +19,9 @@ shoreline.}
 within a distance of \code{dmax} from a given bearing.}
 
 \item{spread}{Vector of relative bearings (in degrees) for which
-to calculate fetch around each main bearing (see \code{\link{fetch_len}}
-for details).}
+to calculate fetch around each main bearing.}
+
+\item{projected}{Should projected coordinates be used to calculate fetch?}
 }
 \value{
 A matrix of fetch lengths, with one row by point in \code{pts} and
@@ -32,8 +33,11 @@ for multiple points.
 }
 \details{
 This function clips the \code{shoreline} layer to a rectangle around each
- point in \code{pts} before applying \code{\link{fetch_len}} to all points.
- This saves computation time if points of interest are spatially clustered
- and their rectangular buffers overlap.
+point in \code{pts} before applying \code{\link{fetch_len}} to all points.
+This saves computation time if points of interest are spatially clustered
+and their rectangular buffers overlap.
+}
+\seealso{
+\code{\link{fetch_len}} for details on the fetch length computation.
 }
 

@@ -21,7 +21,7 @@ dmax <- 50000
 system.time(fetch_res <- fetch_len(Eco[1], bearings, GSHHS_clip, dmax, spread))
 
 # Multiple points
-system.time(fetchmult <- fetch_len_multi(Eco[1:10], bearings, GSHHS_clip, dmax, spread))
+system.time(fetchmult <- fetch_len_multi(Eco[1:5], bearings, GSHHS_clip, dmax, spread))
 
 # Projected coords
 land <- rgdal::readOGR("/nfs/dgill-data/wind_fetch/Greg/SEFL_LandPolygon_UTM.shp",
@@ -31,7 +31,7 @@ greg_pts <- rgdal::readOGR("/nfs/dgill-data/wind_fetch/Greg/Shoreline_Points.shp
                            "Shoreline_Points")
 greg_pts <- as(greg_pts, "SpatialPoints")
 
-system.time(fetch_res2 <- fetch_len_proj(greg_pts[1], bearings, land, dmax, spread))
-
+system.time(fetch_res2 <- fetch_len(greg_pts[2], bearings, land, dmax, spread, TRUE))
+system.time(fetchmult2 <- fetch_len_multi(greg_pts[1:5], bearings, land, dmax, spread, TRUE))
 
 

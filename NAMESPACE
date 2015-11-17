@@ -2,4 +2,3 @@
 
 export(fetch_len)
 export(fetch_len_multi)
-export(fetch_len_proj)
