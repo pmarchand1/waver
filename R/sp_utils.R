@@ -15,6 +15,7 @@ lines_to_endpts <- function(slines) {
 
 # Create a SpatialLines starting at p, of length len,
 #  along given bearing (in degrees)
+# Note: This function is meant to be used with projected coordinates
 bearing_line <- function(p, bearing, len) {
     l1 <- Line(rbind(
         coordinates(p),

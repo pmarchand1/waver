@@ -42,11 +42,18 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
     # Check p and convert to vector if necessary
     if (is(p, "SpatialPoints")) {
         if (length(p) != 1) stop("p must be a single point.")
+        if (is.projected(p)) {
+            stop(paste("p must have unprojected (long, lat) coordinates for fetch_len.",
+                       "Use fetch_len_proj with projected coordinates."))
+        }
         p <- as.vector(coordinates(p))
     } else {
         if (!is.numeric(p)) stop("non-numeric coordinates given for p.")
         if (length(p) != 2) {
             stop("p must be the long/lat coordinates of a single point.")
+        }
+        if (abs(p[1]) > 180 || abs(p[2]) > 90) {
+            stop("invalid long/lat coordinates for p.")
         }
         if (is.matrix(p)) {
             p <- as.vector(p)
@@ -55,6 +62,10 @@ fetch_len <- function(p, bearings, shoreline, dmax, spread = 0) {
     # Check other inputs
     if (!(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons"))) {
         stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
+    }
+    if (is.projected(shoreline)) {
+        stop(paste("shoreline must have unprojected (long, lat) coordinates",
+                   "for fetch_len. Use fetch_len_proj with projected coordinates."))
     }
     if (!is.vector(bearings, "numeric")) stop("bearings must be a numeric vector.")
     if (!is.vector(spread, "numeric")) stop("spread must be a numeric vector.")
