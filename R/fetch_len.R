@@ -54,6 +54,9 @@ fetch_len <- function(p, bearings, shoreline, dmax,
             stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
         }
         if (projected) {
+            if (!is.projected(p) || !is.projected(shoreline)) {
+                stop("cannot use long/lat coordinates if projected = TRUE.")
+            }
             if (proj4string(p) != proj4string(shoreline)) {
                 stop("projections of p and shoreline do not match.")
             }
@@ -75,7 +78,7 @@ fetch_len <- function(p, bearings, shoreline, dmax,
                                as(shoreline, "SpatialPolygons")))
         if(!in_water) {
             warning("point on land, returning NA")
-            return(rep(NA, length(bearings)))
+            return(setNames(rep(NA, length(bearings)), bearings))
         }
     }
 
@@ -156,6 +159,9 @@ fetch_len_multi <- function(pts, bearings, shoreline, dmax,
         stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
     }
     if (projected) {
+        if (!is.projected(pts) || !is.projected(shoreline)) {
+            stop("cannot use long/lat coordinates if projected = TRUE.")
+        }
         if (proj4string(pts) != proj4string(shoreline)) {
             stop("projections of pts and shoreline do not match.")
         }
@@ -183,6 +189,7 @@ fetch_len_multi <- function(pts, bearings, shoreline, dmax,
                                      spread, projected, check_inputs = FALSE),
                rep(0, length(bearings)))
         )
+    fetch_res
 }
 
 
