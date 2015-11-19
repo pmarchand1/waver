@@ -26,8 +26,3 @@ install.packages("devtools")  # if necessary
 devtools::install_github("pmarchand1/waver")
 ```
 
-## Known issues ##
-
-- Due to a possible bug in the `geosphere` package, an error occurs when attempting to calculate fetch along an horizontal bearing line that crosses the international date line (180 degrees of longitude).
-
-
