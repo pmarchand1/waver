@@ -26,3 +26,6 @@ install.packages("devtools")  # if necessary
 devtools::install_github("pmarchand1/waver")
 ```
 
+## Acknowledgements ##
+ 
+This work was supported by the National Socio-Environmental Synthesis Center (SESYNC) under funding received from the National Science Foundation DBI-1052875.
