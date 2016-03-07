@@ -2,8 +2,12 @@ Package: waver
 Type: Package
 Title: Calculate Fetch and Wave Exposure
 Version: 0.1.0
-Depends: R (>= 3.2.2), sp (>= 1.1)
-Imports: geosphere (>= 1.4), rgeos (>= 0.3)
+Depends:
+    R (>= 3.2.2),
+    sp (>= 1.1)
+Imports:
+    geosphere (>= 1.4),
+    rgeos (>= 0.3)
 Date: 2015-09-24
 Authors@R: as.person(c(
         "Philippe Marchand <pmarchand@sesync.org> [aut, cre]",
@@ -13,5 +17,8 @@ Description: This package contains functions for calculating the
     fetch (length of open water distance along given directions)
     and estimating wave energy from wind and wave monitoring data.
 License: GPL-3
+URL: http://github.com/pmarchand1/waver
 LazyData: TRUE
-Suggests: testthat
+Suggests:
+    testthat
+RoxygenNote: 5.0.1
