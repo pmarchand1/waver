@@ -1,3 +1,5 @@
+[![Travis-CI Build Status](https://travis-ci.org/pmarchand1/waver.svg?branch=master)](https://travis-ci.org/pmarchand1/waver)
+
 ## Purpose ##
 
 The `waver` package was developed to provide R code for the calculation of fetch length - the open water distance over which wind can blow along a given direction - and predict wave energy based on the calculated fetch and user-supplied wind and wave monitoring data.
