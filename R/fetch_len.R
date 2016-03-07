@@ -254,7 +254,7 @@ dist_shore <- function(p, shoreline, bear, dmax, projected) {
         # Line drawn with a point every dmax/500
         geo_line <- geosphere::gcIntermediate(p, geosphere::destPoint(p, bear, dmax),
                      n = 500, sp = TRUE, breakAtDateLine = TRUE, addStartEnd = TRUE)
-        geo_line <- rgdal::spTransform(geo_line, CRS(proj4string(shoreline)))
+        geo_line <- spTransform(geo_line, CRS(proj4string(shoreline)))
         # Return (minimum) distance from p to intersection of geo_line and shoreline
         # If no intersection, fetch is dmax
         land_int <- rgeos::gIntersection(geo_line, shoreline)

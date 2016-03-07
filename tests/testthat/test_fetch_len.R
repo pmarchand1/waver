@@ -1,4 +1,3 @@
-library(waver)
 context("Fetch length")
 
 # Set up Spatial objects

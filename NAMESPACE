@@ -2,4 +2,5 @@
 
 export(fetch_len)
 export(fetch_len_multi)
+import(rgdal)
 import(sp)
