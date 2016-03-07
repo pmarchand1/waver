@@ -4,7 +4,7 @@ Title: Calculate Fetch and Wave Exposure
 Version: 0.1.0
 Depends:
     R (>= 3.2.2),
-    rgdal (>= 1.0),
+    rgdal (>= 0.8),
     sp (>= 1.1)
 Imports:
     geosphere (>= 1.4),
