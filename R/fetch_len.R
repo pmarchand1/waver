@@ -73,9 +73,8 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 
     # If shoreline is a polygons (land) layer, check that point is not on land
     if (is(shoreline, "SpatialPolygons")) {
-        # Note: 'as' only to remove DataFrame part of Spatial objects
-        in_water <- is.na(over(as(p, "SpatialPoints"),
-                               as(shoreline, "SpatialPolygons")))
+        in_water <- is.null(rgeos::gIntersects(p, shoreline, byid = TRUE,
+                                               returnDense = FALSE)[[1]])
         if(!in_water) {
             warning("point on land, returning NA")
             return(setNames(rep(NA, length(bearings)), bearings))
