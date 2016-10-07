@@ -87,7 +87,7 @@ fetch_len <- function(p, bearings, shoreline, dmax,
     shore_clip <- rgeos::gIntersection(shoreline, clip_rect, byid = TRUE)
     # If no land within rectangle, return dmax for all bearings
     if (is.null(shore_clip) || is(shore_clip, "SpatialPoints")) {
-        return(rep(dmax, length(bearings)))
+        return(setNames(rep(dmax, length(bearings)), bearings))
     }
 
     # Convert any polygons to lines to get line-line intersections later
@@ -100,7 +100,7 @@ fetch_len <- function(p, bearings, shoreline, dmax,
         } else if (!is.null(shore_clip@lineobj)) {
             shore_clip <- shore_clip@lineobj
         } else {  # no land in buffer
-            return(rep(dmax, length(bearings)))
+            return(setNames(rep(dmax, length(bearings)), bearings))
         }
     }
 
@@ -215,14 +215,12 @@ get_clip_rect <- function(p, dmax, projected) {
         if (long - xbuf < -180) {
             westr <- poly_rect(-180, lat - ybuf, long + xbuf, lat + ybuf)
             eastr <- poly_rect(long - xbuf + 360, lat - ybuf, 180, lat + ybuf)
-            clip_rect <- SpatialPolygons(list(Polygons(list(westr), ID = 1),
-                                              Polygons(list(eastr), ID = 2)),
+            clip_rect <- SpatialPolygons(list(Polygons(list(westr, eastr), ID = 1)),
                                          proj4string = CRS(proj4string(p)))
         } else if(long + xbuf > 180) {
             westr <- poly_rect(-180, lat - ybuf, long + xbuf - 360, lat + ybuf)
             eastr <- poly_rect(long - xbuf, lat - ybuf, 180, lat + ybuf)
-            clip_rect <- SpatialPolygons(list(Polygons(list(westr), ID = 1),
-                                              Polygons(list(eastr), ID = 2)),
+            clip_rect <- SpatialPolygons(list(Polygons(list(westr, eastr), ID = 1)),
                                          proj4string = CRS(proj4string(p)))
         } else {
             r1 <- poly_rect(long - xbuf, lat - ybuf, long + xbuf, lat + ybuf)
