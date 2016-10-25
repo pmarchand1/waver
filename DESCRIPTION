@@ -7,7 +7,7 @@ Depends:
     rgdal (>= 0.8),
     sp (>= 1.1)
 Imports:
-    geosphere (>= 1.4),
+    geosphere (>= 1.5),
     rgeos (>= 0.3)
 Authors@R: as.person(c(
         "Philippe Marchand <pmarchand@sesync.org> [aut, cre]",

@@ -267,13 +267,13 @@ dist_shore <- function(p, shoreline, bear, dmax, projected) {
 #  of an intersection between SpatialLines which could include points and lines
 dist_min <- function(p, inters) {
     if (class(inters) == "SpatialPoints") {
-        min(geosphere::distVincentyEllipsoid(p, inters))
+        min(geosphere::distGeo(p, inters))
     } else if (class(inters) == "SpatialLines") {
-        min(geosphere::distVincentyEllipsoid(p, lines_to_endpts(inters)))
+        min(geosphere::distGeo(p, lines_to_endpts(inters)))
     } else if (class(inters) == "SpatialCollections") {
         coord_mat <- rbind(coordinates(inters@pointobj),
                            coordinates(lines_to_endpts(inters@lineobj)))
-        min(geosphere::distVincentyEllipsoid(p, coord_mat))
+        min(geosphere::distGeo(p, coord_mat))
     } else {
         warning(paste("Point at", c(p[1], p[2]),
                       "cannot calculate distance to shore, returning NA."))
