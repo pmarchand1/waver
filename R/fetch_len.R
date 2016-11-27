@@ -241,7 +241,8 @@ convert_to_lines <- function(sp_obj) {
         res <- as(sp_obj, "SpatialLines")
     } else if (is(sp_obj, "SpatialCollections")) {
         if (!is.null(sp_obj@polyobj) && !is.null(sp_obj@lineobj)) {
-            res <- rbind(as(sp_obj@polyobj, "SpatialLines"), sp_obj@lineobj)
+            res <- rbind(as(sp_obj@polyobj, "SpatialLines"), sp_obj@lineobj,
+                         makeUniqueIDs = TRUE)
         } else if (!is.null(sp_obj@polyobj)) {
             res <- as(sp_obj@polyobj, "SpatialLines")
         } else if (!is.null(sp_obj@lineobj)) {
