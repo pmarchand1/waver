@@ -84,26 +84,26 @@ fetch_len <- function(p, bearings, shoreline, dmax,
     # Clip shoreline layer to a rectangle around point
     # to guarantee at least dmax on each side
     clip_rect <- get_clip_rect(p, dmax, projected)
-    shore_clip <- rgeos::gIntersection(shoreline, clip_rect, byid = TRUE)
+    shore_clip <- tryCatch(
+        rgeos::gIntersection(shoreline, clip_rect, byid = TRUE),
+        # If it fails, try byid = FALSE
+        error = function(e) tryCatch(
+            rgeos::gIntersection(shoreline, clip_rect, byid = FALSE),
+            error = function(e) {
+                warning("Error clipping shoreline, returning NA")
+                return(setNames(rep(NA, length(bearings)), bearings))
+            }
+        )
+    )
+
+    # Convert any polygons to lines to get line-line intersections later
+    shore_clip <- convert_to_lines(shore_clip)
     # If no land within rectangle, return dmax for all bearings
-    if (is.null(shore_clip) || is(shore_clip, "SpatialPoints")) {
+    if (is.null(shore_clip)) {
         return(setNames(rep(dmax, length(bearings)), bearings))
     }
 
-    # Convert any polygons to lines to get line-line intersections later
-    if (is(shore_clip, "SpatialPolygons")) {
-        shore_clip <- as(shore_clip, "SpatialLines")
-    } else if (is(shore_clip, "SpatialCollections")) {
-        if (!is.null(shore_clip@polyobj)) {
-            shore_clip <- rbind(as(shore_clip@polyobj, "SpatialLines"),
-                                shore_clip@lineobj)
-        } else if (!is.null(shore_clip@lineobj)) {
-            shore_clip <- shore_clip@lineobj
-        } else {  # no land in buffer
-            return(setNames(rep(dmax, length(bearings)), bearings))
-        }
-    }
-
+    # Calculate fetch
     if (all(spread == 0)) {
         # if no sub-bearings, just return distance to shore for each bearing
         fetch_res <- vapply(bearings,
@@ -229,6 +229,26 @@ get_clip_rect <- function(p, dmax, projected) {
         }
     }
     clip_rect
+}
+
+# If sp_obj is a SpatialPolygons or SpatialCollections, convert to SpatialLines
+# If it has no polygons or lines (e.g. SpatialPoints), return NULL
+convert_to_lines <- function(sp_obj) {
+    res <- NULL
+    if (is(sp_obj, "SpatialLines")) {
+        res <- sp_obj
+    } else if (is(sp_obj, "SpatialPolygons")) {
+        res <- as(sp_obj, "SpatialLines")
+    } else if (is(sp_obj, "SpatialCollections")) {
+        if (!is.null(sp_obj@polyobj) && !is.null(sp_obj@lineobj)) {
+            res <- rbind(as(sp_obj@polyobj, "SpatialLines"), sp_obj@lineobj)
+        } else if (!is.null(sp_obj@polyobj)) {
+            res <- as(sp_obj@polyobj, "SpatialLines")
+        } else if (!is.null(sp_obj@lineobj)) {
+            res <- sp_obj@lineobj
+        }
+    }
+    res
 }
 
 # Returns the distance from point p to shoreline
