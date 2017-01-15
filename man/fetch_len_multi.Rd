@@ -5,7 +5,7 @@
 \title{Calculate the fetch length for multiple points}
 \usage{
 fetch_len_multi(pts, bearings, shoreline, dmax, spread = 0,
-  projected = FALSE)
+  method = c("btree", "clip"), projected = FALSE)
 }
 \arguments{
 \item{pts}{A SpatialPoints* object.}
@@ -21,6 +21,9 @@ within a distance of \code{dmax} from a given bearing.}
 \item{spread}{Vector of relative bearings (in degrees) for which
 to calculate fetch around each main bearing.}
 
+\item{method}{Whether to use the "btree" (default) or "clip" method.
+See below for more details.}
+
 \item{projected}{Should projected coordinates be used to calculate fetch?}
 }
 \value{
@@ -28,14 +31,26 @@ A matrix of fetch lengths, with one row by point in \code{pts} and
  one column by bearing in \code{bearings}.
 }
 \description{
-\code{fetch_len_multi} provides an efficient method to compute fetch length
+\code{fetch_len_multi} provides two methods to efficiently compute fetch length
 for multiple points.
 }
 \details{
-This function clips the \code{shoreline} layer to a rectangle around each
-point in \code{pts} before applying \code{\link{fetch_len}} to all points.
-This saves computation time if points of interest are spatially clustered
-and their rectangular buffers overlap.
+With \code{method = "btree"}, the \code{\link[rgeos]{gBinarySTRtreeQuery}}
+function from the rgeos package is called to determine which polygons in
+\code{shoreline} could be within \code{dmax} of each point. This is a fast
+calculation based on bounding box overlap.
+
+With \code{method = "clip"}, the \code{shoreline} layer is clipped to a polygon
+formed by the union of rectangular buffers around each point.
+
+In both cases, \code{\link{fetch_len}} is then applied to each point,
+using only the necessary portion of the shoreline.
+
+Generally, the "clip" method will produce the biggest time savings when
+points are clustered within distances less than \code{dmax} (so their
+clipping rectangles overlap), whereas the "btree" method will be more
+efficient when the shoreline is composed of multiple polygons and points are
+distant from each other.
 }
 \seealso{
 \code{\link{fetch_len}} for details on the fetch length computation.

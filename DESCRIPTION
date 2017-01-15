@@ -1,19 +1,20 @@
 Package: waver
 Type: Package
-Title: Calculate Fetch and Wave Exposure
-Version: 0.1.0
+Title: Calculate Fetch and Wave Energy
+Version: 0.2.0
 Depends:
     R (>= 3.2.2),
     rgdal (>= 0.8),
     sp (>= 1.1)
 Imports:
     geosphere (>= 1.5),
+    methods,
     rgeos (>= 0.3)
 Authors@R: as.person(c(
-        "Philippe Marchand <pmarchand@sesync.org> [aut, cre]",
+        "Philippe Marchand <marchand.philippe@gmail.com> [aut, cre]",
         "David Gill [aut]"
     ))
-Description: This package contains functions for calculating the
+Description: Functions for calculating the
     fetch (length of open water distance along given directions)
     and estimating wave energy from wind and wave monitoring data.
 License: GPL-3

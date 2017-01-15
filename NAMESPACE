@@ -2,5 +2,9 @@
 
 export(fetch_len)
 export(fetch_len_multi)
+export(wave_energy)
 import(rgdal)
 import(sp)
+importFrom(methods,as)
+importFrom(methods,is)
+importFrom(stats,setNames)

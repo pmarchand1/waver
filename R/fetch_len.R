@@ -16,8 +16,8 @@
 #'
 #' If \code{projected} is FALSE (the default), the input data must be in WGS84
 #' geographic (longitude, latitude) coordinates. Geodesic distances are calculated
-#' using the Vincenty ellipsoid formula from the geosphere R package. All
-#' distance are expressed in meters.
+#' using the \code{\link[geosphere]{distGeo}} function from the geosphere R
+#' package. All distance are expressed in meters.
 #'
 #' If \code{projected} is TRUE, the input data (\code{p} and \code{shoreline})
 #' must share the same projection. Projected distances are calculated with the
@@ -41,6 +41,15 @@
 #' another function that already checks inputs.
 #' @return A named vector representing the fetch length for each direction
 #'  given in \code{bearings}.
+#' @examples
+#'  pt <- SpatialPoints(matrix(c(0, 0), ncol = 2), proj4string = CRS("+proj=longlat"))
+#'  # Shoreline is a rectangle from (-0.2, 0.25) to (0.3, 0.5)
+#'  rect <- Polygon(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
+#'                        c(0.25, rep(0.3, 2), rep(0.25, 2))))
+#'  land <- SpatialPolygons(list(Polygons(list(rect), ID = 1)),
+#'                          proj4string = CRS("+proj=longlat"))
+#'  fetch_len(pt, bearings = c(0, 45, 225, 315), land,
+#'            dmax = 50000, spread = c(-10, 0, 10))
 #' @seealso \code{\link{fetch_len_multi}} for an efficient alternative when
 #'  computing fetch length for multiple points.
 #' @export
@@ -128,13 +137,25 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 
 #' Calculate the fetch length for multiple points
 #'
-#' \code{fetch_len_multi} provides an efficient method to compute fetch length
+#' \code{fetch_len_multi} provides two methods to efficiently compute fetch length
 #' for multiple points.
 #'
-#' This function clips the \code{shoreline} layer to a rectangle around each
-#' point in \code{pts} before applying \code{\link{fetch_len}} to all points.
-#' This saves computation time if points of interest are spatially clustered
-#' and their rectangular buffers overlap.
+#' With \code{method = "btree"}, the \code{\link[rgeos]{gBinarySTRtreeQuery}}
+#' function from the rgeos package is called to determine which polygons in
+#' \code{shoreline} could be within \code{dmax} of each point. This is a fast
+#' calculation based on bounding box overlap.
+#'
+#' With \code{method = "clip"}, the \code{shoreline} layer is clipped to a polygon
+#' formed by the union of rectangular buffers around each point.
+#'
+#' In both cases, \code{\link{fetch_len}} is then applied to each point,
+#' using only the necessary portion of the shoreline.
+#'
+#' Generally, the "clip" method will produce the biggest time savings when
+#' points are clustered within distances less than \code{dmax} (so their
+#' clipping rectangles overlap), whereas the "btree" method will be more
+#' efficient when the shoreline is composed of multiple polygons and points are
+#' distant from each other.
 #'
 #' @param pts A SpatialPoints* object.
 #' @param bearings Vector of bearings, in degrees.
@@ -144,17 +165,24 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 #'  within a distance of \code{dmax} from a given bearing.
 #' @param spread Vector of relative bearings (in degrees) for which
 #'  to calculate fetch around each main bearing.
+#' @param method Whether to use the "btree" (default) or "clip" method.
+#'  See below for more details.
 #' @param projected Should projected coordinates be used to calculate fetch?
 #' @return A matrix of fetch lengths, with one row by point in \code{pts} and
 #'  one column by bearing in \code{bearings}.
 #' @seealso \code{\link{fetch_len}} for details on the fetch length computation.
 #' @export
 fetch_len_multi <- function(pts, bearings, shoreline, dmax,
-                            spread = 0, projected = FALSE) {
+                     spread = 0, method = c("btree", "clip"), projected = FALSE) {
     # Check inputs
+    match.arg(method)
     if (!is(pts, "SpatialPoints")) stop("pts must be a SpatialPoints* object.")
     pts <- as(pts, "SpatialPoints")  # remove DataFrame part if there is one
-    if (!(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons"))) {
+    if (is(shoreline, "SpatialLines")) {
+        shoreline <- as(shoreline, "SpatialLines")
+    } else if (is(shoreline, "SpatialPolygons")) {
+        shoreline <- as(shoreline, "SpatialPolygons")
+    } else {
         stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
     }
     if (projected) {
@@ -174,83 +202,41 @@ fetch_len_multi <- function(pts, bearings, shoreline, dmax,
         stop("dmax must be a single number greater than 0.")
     }
 
-    # Clip shoreline to a merged buffer around all points
+    # Create rectangular buffers around each point
     rect_list <- lapply(1:length(pts),
                         function(i) get_clip_rect(pts[i], dmax, projected))
     rect_buf <- do.call(rbind, c(rect_list, makeUniqueIDs = TRUE))
-    rect_buf <- rgeos::gUnaryUnion(rect_buf)
-    sub_shore <- rgeos::gIntersection(shoreline, rect_buf, byid = TRUE)
 
-    # Calculate fetch for all points and return a (points x bearings) matrix
-    fetch_res <- t(
-        vapply(1:length(pts),
-               function(i) fetch_len(pts[i], bearings, shoreline, dmax,
-                                     spread, projected, check_inputs = FALSE),
-               rep(0, length(bearings)))
+    if (method == "btree") {
+        # Generate list of shoreline polygon IDs with bounding box overlap for each rectangle
+        btree <- rgeos::gBinarySTRtreeQuery(shoreline, rect_buf)
+        # Calculate fetch for point at index i using btree
+        fetch_i <- function(i) {
+            if (is.null(btree[[i]])) {
+                setNames(rep(dmax, length(bearings)), bearings)
+            } else {
+                fetch_len(pts[i], bearings, shoreline[btree[[i]]], dmax,
+                          spread, projected, check_inputs = FALSE)
+            }
+        }
+        # Calculate fetch for all points and return a (points x bearings) matrix
+        fetch_res <- t(vapply(1:length(pts), fetch_i, rep(0, length(bearings))))
+    } else { # method == "clip"
+        # Clip shoreline to a merged buffer around all points
+        rect_buf <- rgeos::gUnaryUnion(rect_buf)
+        sub_shore <- rgeos::gIntersection(shoreline, rect_buf, byid = TRUE)
+        fetch_res <- t(
+            vapply(1:length(pts),
+                   function(i) fetch_len(pts[i], bearings, sub_shore, dmax,
+                                         spread, projected, check_inputs = FALSE),
+                   rep(0, length(bearings)))
         )
+    }
     fetch_res
 }
 
 
 #### Helper functions below are not exported by the package ####
-
-
-# Create clipping rectangle around point p (SpatialPoints of length 1)
-#  to guarantee at least dmax on each side
-# dmax either in meters (if projected = FALSE) or in the projection's coordinates
-get_clip_rect <- function(p, dmax, projected) {
-    if (projected) {
-        x <- coordinates(p)[1]
-        y <- coordinates(p)[2]
-        r1 <- poly_rect(x - dmax, y - dmax, x + dmax, y + dmax)
-        clip_rect <- SpatialPolygons(list(Polygons(list(r1), ID = 1)),
-                                     proj4string = CRS(proj4string(p)))
-    } else {
-        lat_dist <- 111600 # approx. distance (in m) between degrees of latitude
-        long <- coordinates(p)[1]
-        lat <- coordinates(p)[2]
-        ybuf = dmax / lat_dist
-        xbuf = ybuf / cospi(abs(lat) / 180)
-        # Split clip_rect in two if it would overlap international date line
-        if (long - xbuf < -180) {
-            westr <- poly_rect(-180, lat - ybuf, long + xbuf, lat + ybuf)
-            eastr <- poly_rect(long - xbuf + 360, lat - ybuf, 180, lat + ybuf)
-            clip_rect <- SpatialPolygons(list(Polygons(list(westr, eastr), ID = 1)),
-                                         proj4string = CRS(proj4string(p)))
-        } else if(long + xbuf > 180) {
-            westr <- poly_rect(-180, lat - ybuf, long + xbuf - 360, lat + ybuf)
-            eastr <- poly_rect(long - xbuf, lat - ybuf, 180, lat + ybuf)
-            clip_rect <- SpatialPolygons(list(Polygons(list(westr, eastr), ID = 1)),
-                                         proj4string = CRS(proj4string(p)))
-        } else {
-            r1 <- poly_rect(long - xbuf, lat - ybuf, long + xbuf, lat + ybuf)
-            clip_rect <- SpatialPolygons(list(Polygons(list(r1), ID = 1)),
-                                         proj4string = CRS(proj4string(p)))
-        }
-    }
-    clip_rect
-}
-
-# If sp_obj is a SpatialPolygons or SpatialCollections, convert to SpatialLines
-# If it has no polygons or lines (e.g. SpatialPoints), return NULL
-convert_to_lines <- function(sp_obj) {
-    res <- NULL
-    if (is(sp_obj, "SpatialLines")) {
-        res <- sp_obj
-    } else if (is(sp_obj, "SpatialPolygons")) {
-        res <- as(sp_obj, "SpatialLines")
-    } else if (is(sp_obj, "SpatialCollections")) {
-        if (!is.null(sp_obj@polyobj) && !is.null(sp_obj@lineobj)) {
-            res <- rbind(as(sp_obj@polyobj, "SpatialLines"), sp_obj@lineobj,
-                         makeUniqueIDs = TRUE)
-        } else if (!is.null(sp_obj@polyobj)) {
-            res <- as(sp_obj@polyobj, "SpatialLines")
-        } else if (!is.null(sp_obj@lineobj)) {
-            res <- sp_obj@lineobj
-        }
-    }
-    res
-}
 
 # Returns the distance from point p to shoreline
 # following bearing bear and up to distance dmax

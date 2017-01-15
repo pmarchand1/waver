@@ -48,8 +48,8 @@ calculated for the main bearings only.
 
 If \code{projected} is FALSE (the default), the input data must be in WGS84
 geographic (longitude, latitude) coordinates. Geodesic distances are calculated
-using the Vincenty ellipsoid formula from the geosphere R package. All
-distance are expressed in meters.
+using the \code{\link[geosphere]{distGeo}} function from the geosphere R
+package. All distance are expressed in meters.
 
 If \code{projected} is TRUE, the input data (\code{p} and \code{shoreline})
 must share the same projection. Projected distances are calculated with the
@@ -58,6 +58,16 @@ rgeos R package. All distances are expressed in the projection's coordinates.
 If the shoreline layer is given as SpatialPolygons*, the function verifies
 that the input point is outside all polygons (i.e. in water). If this is
 not the case, it issues a warning and returns a vector of \code{NA}.
+}
+\examples{
+ pt <- SpatialPoints(matrix(c(0, 0), ncol = 2), proj4string = CRS("+proj=longlat"))
+ # Shoreline is a rectangle from (-0.2, 0.25) to (0.3, 0.5)
+ rect <- Polygon(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
+                       c(0.25, rep(0.3, 2), rep(0.25, 2))))
+ land <- SpatialPolygons(list(Polygons(list(rect), ID = 1)),
+                         proj4string = CRS("+proj=longlat"))
+ fetch_len(pt, bearings = c(0, 45, 225, 315), land,
+           dmax = 50000, spread = c(-10, 0, 10))
 }
 \seealso{
 \code{\link{fetch_len_multi}} for an efficient alternative when
