@@ -2,6 +2,16 @@ Package: waver
 Type: Package
 Title: Calculate Fetch and Wave Energy
 Version: 0.2.0
+Description: Functions for calculating the
+    fetch (length of open water distance along given directions)
+    and estimating wave energy from wind and wave monitoring data.
+License: GPL-3
+URL: https://github.com/pmarchand1/waver
+BugReports: https://github.com/pmarchand1/waver/issues
+Authors@R: as.person(c(
+        "Philippe Marchand <marchand.philippe@gmail.com> [aut, cre]",
+        "David Gill [aut]"
+    ))
 Depends:
     R (>= 3.2.2),
     rgdal (>= 0.8),
@@ -10,15 +20,6 @@ Imports:
     geosphere (>= 1.5),
     methods,
     rgeos (>= 0.3)
-Authors@R: as.person(c(
-        "Philippe Marchand <marchand.philippe@gmail.com> [aut, cre]",
-        "David Gill [aut]"
-    ))
-Description: Functions for calculating the
-    fetch (length of open water distance along given directions)
-    and estimating wave energy from wind and wave monitoring data.
-License: GPL-3
-URL: http://github.com/pmarchand1/waver
 LazyData: TRUE
 Suggests:
     testthat
