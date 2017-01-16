@@ -42,7 +42,8 @@
 #' @return A named vector representing the fetch length for each direction
 #'  given in \code{bearings}.
 #' @examples
-#'  pt <- SpatialPoints(matrix(c(0, 0), ncol = 2), proj4string = CRS("+proj=longlat"))
+#'  pt <- SpatialPoints(matrix(c(0, 0), ncol = 2),
+#'                      proj4string = CRS("+proj=longlat"))
 #'  # Shoreline is a rectangle from (-0.2, 0.25) to (0.3, 0.5)
 #'  rect <- Polygon(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
 #'                        c(0.25, rep(0.3, 2), rep(0.25, 2))))

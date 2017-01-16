@@ -8,10 +8,9 @@ Description: Functions for calculating the
 License: GPL-3
 URL: https://github.com/pmarchand1/waver
 BugReports: https://github.com/pmarchand1/waver/issues
-Authors@R: as.person(c(
-        "Philippe Marchand <marchand.philippe@gmail.com> [aut, cre]",
-        "David Gill [aut]"
-    ))
+Authors@R: c(person('Philippe', 'Marchand', email = 'marchand.philippe@gmail.com',
+                  role = c('aut', 'cre')),
+             person('David', 'Gill', role = 'aut'))
 Depends:
     R (>= 3.2.2),
     rgdal (>= 0.8),
