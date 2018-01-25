@@ -1,7 +1,7 @@
 Package: waver
 Type: Package
 Title: Calculate Fetch and Wave Energy
-Version: 0.2.0
+Version: 0.2.1
 Description: Functions for calculating the
     fetch (length of open water distance along given directions)
     and estimating wave energy from wind and wave monitoring data.
