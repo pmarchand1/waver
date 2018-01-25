@@ -5,7 +5,7 @@
 \title{Calculate the fetch length for multiple points}
 \usage{
 fetch_len_multi(pts, bearings, shoreline, dmax, spread = 0,
-  method = c("btree", "clip"), projected = FALSE)
+  method = "btree", projected = FALSE)
 }
 \arguments{
 \item{pts}{A SpatialPoints* object.}
@@ -55,4 +55,3 @@ distant from each other.
 \seealso{
 \code{\link{fetch_len}} for details on the fetch length computation.
 }
-

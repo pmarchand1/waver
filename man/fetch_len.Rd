@@ -74,4 +74,3 @@ not the case, it issues a warning and returns a vector of \code{NA}.
 \code{\link{fetch_len_multi}} for an efficient alternative when
  computing fetch length for multiple points.
 }
-

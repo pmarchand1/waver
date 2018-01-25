@@ -53,4 +53,3 @@ Resio, D.T., Bratos, S.M., and Thompson, E.F. (2003). Meteorology
  and Wave Climate, Chapter II-2. Coastal Engineering Manual.
  US Army Corps of Engineers, Washington DC, 72pp.
 }
-
