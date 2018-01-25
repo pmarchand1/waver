@@ -174,9 +174,9 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 #' @seealso \code{\link{fetch_len}} for details on the fetch length computation.
 #' @export
 fetch_len_multi <- function(pts, bearings, shoreline, dmax,
-                     spread = 0, method = c("btree", "clip"), projected = FALSE) {
+                     spread = 0, method = "btree", projected = FALSE) {
     # Check inputs
-    match.arg(method)
+    match.arg(method, choices = c("btree", "clip"))
     if (!is(pts, "SpatialPoints")) stop("pts must be a SpatialPoints* object.")
     pts <- as(pts, "SpatialPoints")  # remove DataFrame part if there is one
     if (is(shoreline, "SpatialLines")) {
