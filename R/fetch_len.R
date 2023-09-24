@@ -21,7 +21,7 @@
 #' geographic coordinates. For geographic coordinates, we recommend setting
 #' \code{sf_use_s2(FALSE)}, which results in \code{st_distance} using the ellipsoid
 #' distance calculation (requires the lwgeom package), instead of the less precise
-#'  spherical distance calculation. For projected coordinates, the Euclidean distance
+#' spherical distance calculation. For projected coordinates, the Euclidean distance
 #' is calculated.
 #'
 #' If the shoreline layer is composed of polygons rather than lines, the function

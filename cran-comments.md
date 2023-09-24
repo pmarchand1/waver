@@ -1,7 +1,7 @@
 ## Tested on
 
 win-builder (devel and release)
-Ubuntu 12.04 with R 3.4.2 (on travis-ci)
+R-hub (Ubuntu Linux 20.04.1 LTS, R-release, GCC)
 
 ## R CMD check results
 

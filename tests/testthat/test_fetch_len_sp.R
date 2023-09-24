@@ -99,6 +99,9 @@ test_that("fetch_len_multi matches fetch_len results", {
     expect_equal(suppressWarnings(fetch_len_multi(pts, bearings, lands, dmax,
                                                   method = "clip")),
                  `rownames<-`(rbind(fexp1, fexp2, fexp3), NULL), tolerance = tol)
+    expect_equal(suppressWarnings(fetch_len_multi(pts, bearings, lands, dmax,
+                                                  method = "clip")),
+                 `rownames<-`(rbind(fexp1, fexp2, fexp3), NULL), tolerance = tol)
     expect_equal(
         suppressWarnings(fetch_len_multi(pts, bearings, lands, dmax, spread)),
         `rownames<-`(rbind(fexp1spr, fexp2spr, fexp3), NULL), tolerance = tol)

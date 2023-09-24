@@ -17,7 +17,7 @@ bearing_line <- function(p, bearing, len) {
     st_sfc(l1, crs = st_crs(p))
 }
 
-# Create clipping rectangle around point p (SpatialPoints of length 1)
+# Create clipping rectangle around point p (sfc_POINT object for a single point)
 #  to guarantee at least dmax on each side
 # dmax either in meters (if longlat coordinates) or in the projection's coordinates
 get_clip_rect <- function(p, dmax) {

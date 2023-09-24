@@ -24,7 +24,7 @@ land2 <- st_sfc(list(
 p2_prj <- st_transform(p2, aeqd2)
 land2_prj <- st_transform(land2, aeqd2)
 
-# p3 on land1
+# p3 on land
 p3 <- st_sfc(st_point(c(0, 0.4)), crs = longlat)
 p3_prj <- st_transform(p3, aeqd1)
 p13 <- c(p1, p3)
@@ -86,6 +86,9 @@ test_that("fetch_len for point on land returns NA and issues warning", {
 
 test_that("fetch_len_multi matches fetch_len results", {
     expect_equal(suppressWarnings(fetch_len_multi(pts, bearings, lands, dmax)),
+                 `rownames<-`(rbind(fexp1, fexp2, fexp3), NULL), tolerance = tol)
+    expect_equal(suppressWarnings(fetch_len_multi(pts, bearings, lands, dmax,
+                                                  method = "clip")),
                  `rownames<-`(rbind(fexp1, fexp2, fexp3), NULL), tolerance = tol)
     expect_equal(suppressWarnings(fetch_len_multi(pts, bearings, lands, dmax,
                                                   method = "clip")),

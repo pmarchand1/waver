@@ -17,7 +17,6 @@ Depends:
 Imports:
     geosphere (>= 1.5),
     methods
-LazyData: TRUE
 Suggests:
     lwgeom,
     sp,
