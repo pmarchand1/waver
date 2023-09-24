@@ -4,8 +4,7 @@
 \alias{wave_energy}
 \title{Calculate the wave energy flux}
 \usage{
-wave_energy(height = NA, period = NA, wind = NA, fetch = NA,
-  depth = NA)
+wave_energy(height = NA, period = NA, wind = NA, fetch = NA, depth = NA)
 }
 \arguments{
 \item{height}{Significant wave height, in meters.}

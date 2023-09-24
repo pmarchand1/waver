@@ -4,16 +4,23 @@
 \alias{fetch_len_multi}
 \title{Calculate the fetch length for multiple points}
 \usage{
-fetch_len_multi(pts, bearings, shoreline, dmax, spread = 0,
-  method = "btree", projected = FALSE)
+fetch_len_multi(
+  pts,
+  bearings,
+  shoreline,
+  dmax,
+  spread = 0,
+  method = "btree",
+  projected = FALSE
+)
 }
 \arguments{
-\item{pts}{A SpatialPoints* object.}
+\item{pts}{Simple features (sf or sfc) object containing point data.}
 
 \item{bearings}{Vector of bearings, in degrees.}
 
-\item{shoreline}{SpatialLines* or SpatialPolygons* object representing the
-shoreline.}
+\item{shoreline}{Simple feature (sf or sfc) object representing the
+shoreline, in either line or polygon format.}
 
 \item{dmax}{Maximum value of fetch length, returned if there is no land
 within a distance of \code{dmax} from a given bearing.}
@@ -24,7 +31,7 @@ to calculate fetch around each main bearing.}
 \item{method}{Whether to use the "btree" (default) or "clip" method.
 See below for more details.}
 
-\item{projected}{Should projected coordinates be used to calculate fetch?}
+\item{projected}{Deprecated argument, kept for backwards compatibility.}
 }
 \value{
 A matrix of fetch lengths, with one row by point in \code{pts} and
@@ -35,13 +42,14 @@ A matrix of fetch lengths, with one row by point in \code{pts} and
 for multiple points.
 }
 \details{
-With \code{method = "btree"}, the \code{\link[rgeos]{gBinarySTRtreeQuery}}
-function from the rgeos package is called to determine which polygons in
-\code{shoreline} could be within \code{dmax} of each point. This is a fast
-calculation based on bounding box overlap.
+With \code{method = "btree"} (default), the fetch calculation for each point only uses
+the geometries within the \code{shoreline} layer that intersect with a rectangular
+buffer of size \code{dmax} around that point. (The name is based on a previous version
+of the function that implemented this method using the \code{gBinarySTRtreeQuery} function
+from the rgeos package.)
 
-With \code{method = "clip"}, the \code{shoreline} layer is clipped to a polygon
-formed by the union of rectangular buffers around each point.
+With \code{method = "clip"}, the \code{shoreline} is clipped to its intersection
+with a polygon formed by the union of all the individual points' rectangular buffers.
 
 In both cases, \code{\link{fetch_len}} is then applied to each point,
 using only the necessary portion of the shoreline.
@@ -49,8 +57,8 @@ using only the necessary portion of the shoreline.
 Generally, the "clip" method will produce the biggest time savings when
 points are clustered within distances less than \code{dmax} (so their
 clipping rectangles overlap), whereas the "btree" method will be more
-efficient when the shoreline is composed of multiple polygons and points are
-distant from each other.
+efficient when the shoreline is composed of multiple geometrical objects
+and points are distant from each other.
 }
 \seealso{
 \code{\link{fetch_len}} for details on the fetch length computation.

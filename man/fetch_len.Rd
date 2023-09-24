@@ -4,16 +4,23 @@
 \alias{fetch_len}
 \title{Calculate the fetch length around a point}
 \usage{
-fetch_len(p, bearings, shoreline, dmax, spread = 0, projected = FALSE,
-  check_inputs = TRUE)
+fetch_len(
+  p,
+  bearings,
+  shoreline,
+  dmax,
+  spread = 0,
+  projected = FALSE,
+  check_inputs = TRUE
+)
 }
 \arguments{
-\item{p}{SpatialPoints* object of length 1 (single point).}
+\item{p}{Simple feature (sf or sfc) object representing a single point.}
 
 \item{bearings}{Vector of bearings, in degrees.}
 
-\item{shoreline}{SpatialLines* or SpatialPolygons* object representing the
-shoreline.}
+\item{shoreline}{Simple feature (sf or sfc) object representing the
+shoreline, in either line or polygon format.}
 
 \item{dmax}{Maximum value of fetch length, returned if there is no land
 within a distance of \code{dmax} from a given bearing.}
@@ -21,7 +28,7 @@ within a distance of \code{dmax} from a given bearing.}
 \item{spread}{Vector of relative bearings (in degrees) for which
 to calculate fetch around each main bearing (see details).}
 
-\item{projected}{Should projected coordinates be used to calculate fetch?}
+\item{projected}{Deprecated argument, kept for backwards compatibility.}
 
 \item{check_inputs}{Should the validity of inputs be checked? It is
 recommended to keep this TRUE, unless this function is called repeatedly from
@@ -46,27 +53,26 @@ calculated for each sub-bearing are averaged with weights proportional to
 \code{cos(spread)}. By default, \code{spread = 0} and fetch length is
 calculated for the main bearings only.
 
-If \code{projected} is FALSE (the default), the input data must be in WGS84
-geographic (longitude, latitude) coordinates. Geodesic distances are calculated
-using the \code{\link[geosphere]{distGeo}} function from the geosphere R
-package. All distance are expressed in meters.
+The input data can be in either geographic (long, lat) or projected coordinates,
+but \code{p} and \code{shoreline} must share the same coordinate system. Distances
+are calculated using the \code{\link[sf]{st_distance}} function from the sf package
+and expressed in the units of the coordinate system used, or in meters if using
+geographic coordinates. For geographic coordinates, we recommend setting
+\code{sf_use_s2(FALSE)}, which results in \code{st_distance} using the ellipsoid
+distance calculation (requires the lwgeom package), instead of the less precise
+ spherical distance calculation. For projected coordinates, the Euclidean distance
+is calculated.
 
-If \code{projected} is TRUE, the input data (\code{p} and \code{shoreline})
-must share the same projection. Projected distances are calculated with the
-rgeos R package. All distances are expressed in the projection's coordinates.
-
-If the shoreline layer is given as SpatialPolygons*, the function verifies
-that the input point is outside all polygons (i.e. in water). If this is
+If the shoreline layer is composed of polygons rather than lines, the function
+verifies that the input point is outside all polygons (i.e. in water). If this is
 not the case, it issues a warning and returns a vector of \code{NA}.
 }
 \examples{
- pt <- SpatialPoints(matrix(c(0, 0), ncol = 2),
-                     proj4string = CRS("+proj=longlat"))
+ pt <- st_sfc(st_point(c(0, 0)), crs = st_crs(4326))
  # Shoreline is a rectangle from (-0.2, 0.25) to (0.3, 0.5)
- rect <- Polygon(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
-                       c(0.25, rep(0.3, 2), rep(0.25, 2))))
- land <- SpatialPolygons(list(Polygons(list(rect), ID = 1)),
-                         proj4string = CRS("+proj=longlat"))
+ rect <- st_polygon(list(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
+                               c(0.25, rep(0.3, 2), rep(0.25, 2)))))
+ land <- st_sfc(rect, crs = st_crs(4326))
  fetch_len(pt, bearings = c(0, 45, 225, 315), land,
            dmax = 50000, spread = c(-10, 0, 10))
 }

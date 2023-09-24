@@ -4,7 +4,7 @@
 
 The `waver` package was developed to provide R code for the calculation of fetch length - the open water distance over which wind can blow along a given direction - and predict wave energy based on the calculated fetch and user-supplied wind and wave monitoring data.
 
-The  `fetch_len` and `fetch_len_multi` functions serve to calculate fetch at single or multiple locations, respectively. These functions accept vector spatial data types (SpatialPoints, SpatialLines and SpatialPolygons) in either projected or unprojected (long/lat) coordinates. Users can specify the bearings for which fetch should be calculated, the number of radii to draw at each bearing (and their angular separation), as well as the maximum fetch length to consider.
+The  `fetch_len` and `fetch_len_multi` functions serve to calculate fetch at single or multiple locations, respectively. These functions accept simple feature spatial data (points, lines and polygons, as read or created by the sf package) in either projected or unprojected (long/lat) coordinates. Users can specify the bearings for which fetch should be calculated, the number of radii to draw at each bearing (and their angular separation), as well as the maximum fetch length to consider.
 
 These functions are based on existing algorithms published by the USGS[1] and Natural Capital Project[2]. These tools are implemented in ArcGIS with Python code and use raster land layers, whereas our fetch calculation uses vector spatial data.
 

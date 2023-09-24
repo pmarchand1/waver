@@ -14,66 +14,71 @@
 #' \code{cos(spread)}. By default, \code{spread = 0} and fetch length is
 #' calculated for the main bearings only.
 #'
-#' If \code{projected} is FALSE (the default), the input data must be in WGS84
-#' geographic (longitude, latitude) coordinates. Geodesic distances are calculated
-#' using the \code{\link[geosphere]{distGeo}} function from the geosphere R
-#' package. All distance are expressed in meters.
+#' The input data can be in either geographic (long, lat) or projected coordinates,
+#' but \code{p} and \code{shoreline} must share the same coordinate system. Distances
+#' are calculated using the \code{\link[sf]{st_distance}} function from the sf package
+#' and expressed in the units of the coordinate system used, or in meters if using
+#' geographic coordinates. For geographic coordinates, we recommend setting
+#' \code{sf_use_s2(FALSE)}, which results in \code{st_distance} using the ellipsoid
+#' distance calculation (requires the lwgeom package), instead of the less precise
+#'  spherical distance calculation. For projected coordinates, the Euclidean distance
+#' is calculated.
 #'
-#' If \code{projected} is TRUE, the input data (\code{p} and \code{shoreline})
-#' must share the same projection. Projected distances are calculated with the
-#' rgeos R package. All distances are expressed in the projection's coordinates.
-#'
-#' If the shoreline layer is given as SpatialPolygons*, the function verifies
-#' that the input point is outside all polygons (i.e. in water). If this is
+#' If the shoreline layer is composed of polygons rather than lines, the function
+#' verifies that the input point is outside all polygons (i.e. in water). If this is
 #' not the case, it issues a warning and returns a vector of \code{NA}.
 #'
-#' @param p SpatialPoints* object of length 1 (single point).
+#' @param p Simple feature (sf or sfc) object representing a single point.
 #' @param bearings Vector of bearings, in degrees.
-#' @param shoreline SpatialLines* or SpatialPolygons* object representing the
-#'  shoreline.
+#' @param shoreline Simple feature (sf or sfc) object representing the
+#'  shoreline, in either line or polygon format.
 #' @param dmax Maximum value of fetch length, returned if there is no land
 #'  within a distance of \code{dmax} from a given bearing.
 #' @param spread Vector of relative bearings (in degrees) for which
 #'  to calculate fetch around each main bearing (see details).
-#' @param projected Should projected coordinates be used to calculate fetch?
+#' @param projected Deprecated argument, kept for backwards compatibility.
 #' @param check_inputs Should the validity of inputs be checked? It is
 #' recommended to keep this TRUE, unless this function is called repeatedly from
 #' another function that already checks inputs.
 #' @return A named vector representing the fetch length for each direction
 #'  given in \code{bearings}.
 #' @examples
-#'  pt <- SpatialPoints(matrix(c(0, 0), ncol = 2),
-#'                      proj4string = CRS("+proj=longlat"))
+#'  pt <- st_sfc(st_point(c(0, 0)), crs = st_crs(4326))
 #'  # Shoreline is a rectangle from (-0.2, 0.25) to (0.3, 0.5)
-#'  rect <- Polygon(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
-#'                        c(0.25, rep(0.3, 2), rep(0.25, 2))))
-#'  land <- SpatialPolygons(list(Polygons(list(rect), ID = 1)),
-#'                          proj4string = CRS("+proj=longlat"))
+#'  rect <- st_polygon(list(cbind(c(rep(-0.2, 2), rep(0.3, 2), -0.2),
+#'                                c(0.25, rep(0.3, 2), rep(0.25, 2)))))
+#'  land <- st_sfc(rect, crs = st_crs(4326))
 #'  fetch_len(pt, bearings = c(0, 45, 225, 315), land,
 #'            dmax = 50000, spread = c(-10, 0, 10))
 #' @seealso \code{\link{fetch_len_multi}} for an efficient alternative when
 #'  computing fetch length for multiple points.
 #' @export
-fetch_len <- function(p, bearings, shoreline, dmax,
-                      spread = 0, projected = FALSE, check_inputs = TRUE) {
+fetch_len <- function(p, bearings, shoreline, dmax, spread = 0,
+                      projected = FALSE, check_inputs = TRUE) {
+    # Convert sp objects to sf format
+    if(is(p, "SpatialPointsDataFrame")) p <- st_as_sf(p)
+    if(is(p, "SpatialPoints")) p <- st_as_sfc(p)
+    if(is(shoreline, "SpatialLinesDataFrame") || is(shoreline, "SpatialPolygonsDataFrame")) {
+        shoreline <- st_as_sf(shoreline)
+    }
+    if(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons")) {
+        shoreline <- st_as_sfc(shoreline)
+    }
+    # Extract geometry columns if p or shoreline are sf objects
+    if(is(p, "sf")) p <- st_geometry(p)
+    if(is(shoreline, "sf")) shoreline <- st_geometry(shoreline)
+
     if (check_inputs) {
-        if (!is(p, "SpatialPoints")) stop("p must be a SpatialPoints* object.")
-        p <- as(p, "SpatialPoints")  # remove DataFrame part if there is one
+        if (!is(p, "sfc_POINT")) stop("p must be a spatial point in sf or sp format.")
         if(length(p) != 1) stop("p must be a single point.")
-        if (!(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons"))) {
-            stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
+        if (!(is(shoreline, "sfc_LINESTRING") || is(shoreline, "sfc_MULTILINESTRING") ||
+              is(shoreline, "sfc_POLYGON")    || is(shoreline, "sfc_MULTIPOLYGON"))) {
+            stop("shoreline must be a spatial object in sf or sp format containing lines or polygons.")
         }
-        if (projected) {
-            if (!is.projected(p) || !is.projected(shoreline)) {
-                stop("cannot use long/lat coordinates if projected = TRUE.")
-            }
-            if (proj4string(p) != proj4string(shoreline)) {
-                stop("projections of p and shoreline do not match.")
-            }
-        } else if (is.projected(p) || is.projected(shoreline)) {
-                stop(paste("p and shoreline must have unprojected (long/lat)",
-                           "coordinates if projected = FALSE."))
+        if (st_crs(p) != st_crs(shoreline)) {
+            stop("projections of p and shoreline do not match.")
         }
+
         if (!is.vector(bearings, "numeric")) stop("bearings must be a numeric vector.")
         if (!is.vector(spread, "numeric")) stop("spread must be a numeric vector.")
         if (!is.vector(dmax, "numeric") || length(dmax) != 1 || dmax <= 0) {
@@ -82,9 +87,10 @@ fetch_len <- function(p, bearings, shoreline, dmax,
     }
 
     # If shoreline is a polygons (land) layer, check that point is not on land
-    if (is(shoreline, "SpatialPolygons")) {
-        in_water <- is.null(rgeos::gIntersects(p, shoreline, byid = TRUE,
-                                               returnDense = FALSE)[[1]])
+    if (is(shoreline, "sfc_POLYGON") || is(shoreline, "sfc_MULTIPOLYGON")) {
+        suppressMessages(
+            in_water <- length(st_intersection(p, shoreline)) == 0
+        )
         if(!in_water) {
             warning("point on land, returning NA")
             return(setNames(rep(NA, length(bearings)), bearings))
@@ -93,44 +99,37 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 
     # Clip shoreline layer to a rectangle around point
     # to guarantee at least dmax on each side
-    clip_rect <- get_clip_rect(p, dmax, projected)
-    shore_clip <- tryCatch(
-        rgeos::gIntersection(shoreline, clip_rect, byid = TRUE),
-        # If it fails, try byid = FALSE
-        error = function(e) tryCatch(
-            rgeos::gIntersection(shoreline, clip_rect, byid = FALSE),
-            error = function(e) {
-                warning("Error clipping shoreline, returning NA")
-                return(setNames(rep(NA, length(bearings)), bearings))
-            }
-        )
+    clip_rect <- get_clip_rect(p, dmax)
+    suppressMessages(
+        shore_clip <- st_intersection(shoreline, clip_rect)
     )
 
-    # Convert any polygons to lines to get line-line intersections later
-    shore_clip <- convert_to_lines(shore_clip)
     # If no land within rectangle, return dmax for all bearings
-    if (is.null(shore_clip)) {
+    if (length(shore_clip) == 0) {
         return(setNames(rep(dmax, length(bearings)), bearings))
     }
 
+    # Convert to multilinestring (if not already lines)
+    #  since line-line intersections are needed later
+    shore_clip <- st_cast(shore_clip, "MULTILINESTRING")
+
     # Calculate fetch
     if (all(spread == 0)) {
-        # if no sub-bearings, just return distance to shore for each bearing
+        # If no sub-bearings, just return distance to shore for each bearing
         fetch_res <- vapply(bearings,
-                   function(b) dist_shore(p, shore_clip, b, dmax, projected), 0)
+                   function(b) dist_shore(p, shore_clip, b, dmax), 0)
     } else {
-        # calculate the distance to shore for each sub-bearing
+        # Calculate the distance to shore for each sub-bearing
         bear_mat <- outer(bearings, spread, "+")
         dists <- vapply(bear_mat,
-                   function(b) dist_shore(p, shore_clip, b, dmax, projected), 0)
+                   function(b) dist_shore(p, shore_clip, b, dmax), 0)
         dim(dists) <- dim(bear_mat)
-        # return weighted means of the sub-bearing fetch values
+        # Return weighted means of the sub-bearing fetch values
         #  with weights proportional to the cosine (relative to their main bearing)
         weights <- cospi(spread / 180)
         weights <- weights / sum(weights)
         fetch_res <- as.vector(dists %*% weights)
     }
-
     names(fetch_res) <- as.character(bearings)
     fetch_res
 }
@@ -141,13 +140,14 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 #' \code{fetch_len_multi} provides two methods to efficiently compute fetch length
 #' for multiple points.
 #'
-#' With \code{method = "btree"}, the \code{\link[rgeos]{gBinarySTRtreeQuery}}
-#' function from the rgeos package is called to determine which polygons in
-#' \code{shoreline} could be within \code{dmax} of each point. This is a fast
-#' calculation based on bounding box overlap.
+#' With \code{method = "btree"} (default), the fetch calculation for each point only uses
+#' the geometries within the \code{shoreline} layer that intersect with a rectangular
+#' buffer of size \code{dmax} around that point. (The name is based on a previous version
+#' of the function that implemented this method using the \code{gBinarySTRtreeQuery} function
+#' from the rgeos package.)
 #'
-#' With \code{method = "clip"}, the \code{shoreline} layer is clipped to a polygon
-#' formed by the union of rectangular buffers around each point.
+#' With \code{method = "clip"}, the \code{shoreline} is clipped to its intersection
+#' with a polygon formed by the union of all the individual points' rectangular buffers.
 #'
 #' In both cases, \code{\link{fetch_len}} is then applied to each point,
 #' using only the necessary portion of the shoreline.
@@ -155,48 +155,50 @@ fetch_len <- function(p, bearings, shoreline, dmax,
 #' Generally, the "clip" method will produce the biggest time savings when
 #' points are clustered within distances less than \code{dmax} (so their
 #' clipping rectangles overlap), whereas the "btree" method will be more
-#' efficient when the shoreline is composed of multiple polygons and points are
-#' distant from each other.
+#' efficient when the shoreline is composed of multiple geometrical objects
+#' and points are distant from each other.
 #'
-#' @param pts A SpatialPoints* object.
+#' @param pts Simple features (sf or sfc) object containing point data.
 #' @param bearings Vector of bearings, in degrees.
-#' @param shoreline SpatialLines* or SpatialPolygons* object representing the
-#'  shoreline.
+#' @param shoreline Simple feature (sf or sfc) object representing the
+#'  shoreline, in either line or polygon format.
 #' @param dmax Maximum value of fetch length, returned if there is no land
 #'  within a distance of \code{dmax} from a given bearing.
 #' @param spread Vector of relative bearings (in degrees) for which
 #'  to calculate fetch around each main bearing.
 #' @param method Whether to use the "btree" (default) or "clip" method.
 #'  See below for more details.
-#' @param projected Should projected coordinates be used to calculate fetch?
+#' @param projected Deprecated argument, kept for backwards compatibility.
 #' @return A matrix of fetch lengths, with one row by point in \code{pts} and
 #'  one column by bearing in \code{bearings}.
 #' @seealso \code{\link{fetch_len}} for details on the fetch length computation.
 #' @export
 fetch_len_multi <- function(pts, bearings, shoreline, dmax,
                      spread = 0, method = "btree", projected = FALSE) {
+    # Convert sp objects to sf format
+    if(is(pts, "SpatialPointsDataFrame")) pts <- st_as_sf(pts)
+    if(is(pts, "SpatialPoints")) pts <- st_as_sfc(pts)
+    if(is(shoreline, "SpatialLinesDataFrame") || is(shoreline, "SpatialPolygonsDataFrame")) {
+        shoreline <- st_as_sf(shoreline)
+    }
+    if(is(shoreline, "SpatialLines") || is(shoreline, "SpatialPolygons")) {
+        shoreline <- st_as_sfc(shoreline)
+    }
+    # Extract geometry columns if pts or shoreline are sf objects
+    if(is(pts, "sf")) pts <- st_geometry(pts)
+    if(is(shoreline, "sf")) shoreline <- st_geometry(shoreline)
+
     # Check inputs
     match.arg(method, choices = c("btree", "clip"))
-    if (!is(pts, "SpatialPoints")) stop("pts must be a SpatialPoints* object.")
-    pts <- as(pts, "SpatialPoints")  # remove DataFrame part if there is one
-    if (is(shoreline, "SpatialLines")) {
-        shoreline <- as(shoreline, "SpatialLines")
-    } else if (is(shoreline, "SpatialPolygons")) {
-        shoreline <- as(shoreline, "SpatialPolygons")
-    } else {
-        stop("shoreline must be a SpatialLines* or SpatialPolygons* object.")
+    if (!is(pts, "sfc_POINT")) stop("pts must be a spatial point in sf or sp format.")
+    if (!(is(shoreline, "sfc_LINESTRING") || is(shoreline, "sfc_MULTILINESTRING") ||
+          is(shoreline, "sfc_POLYGON")    || is(shoreline, "sfc_MULTIPOLYGON"))) {
+        stop("shoreline must be a spatial object in sf or sp format containing lines or polygons.")
     }
-    if (projected) {
-        if (!is.projected(pts) || !is.projected(shoreline)) {
-            stop("cannot use long/lat coordinates if projected = TRUE.")
-        }
-        if (proj4string(pts) != proj4string(shoreline)) {
-            stop("projections of pts and shoreline do not match.")
-        }
-    } else if (is.projected(pts) || is.projected(shoreline)) {
-            stop(paste("pts and shoreline must have unprojected (long/lat)",
-                       "coordinates if projected = FALSE."))
+    if (st_crs(pts) != st_crs(shoreline)) {
+        stop("projections of p and shoreline do not match.")
     }
+
     if (!is.vector(bearings, "numeric")) stop("bearings must be a numeric vector.")
     if (!is.vector(spread, "numeric")) stop("spread must be a numeric vector.")
     if (!is.vector(dmax, "numeric") || length(dmax) != 1 || dmax <= 0) {
@@ -205,31 +207,35 @@ fetch_len_multi <- function(pts, bearings, shoreline, dmax,
 
     # Create rectangular buffers around each point
     rect_list <- lapply(1:length(pts),
-                        function(i) get_clip_rect(pts[i], dmax, projected))
-    rect_buf <- do.call(rbind, c(rect_list, makeUniqueIDs = TRUE))
+                        function(i) get_clip_rect(pts[i], dmax))
+    rect_buf <- do.call(c, rect_list)
 
     if (method == "btree") {
-        # Generate list of shoreline polygon IDs with bounding box overlap for each rectangle
-        btree <- rgeos::gBinarySTRtreeQuery(shoreline, rect_buf)
+        # Generate list of shoreline geometry indices that intersect each rectangle
+        suppressMessages(
+            btree <- st_intersects(rect_buf, shoreline)
+        )
         # Calculate fetch for point at index i using btree
         fetch_i <- function(i) {
-            if (is.null(btree[[i]])) {
+            if (length(btree[[i]]) == 0) {
                 setNames(rep(dmax, length(bearings)), bearings)
             } else {
                 fetch_len(pts[i], bearings, shoreline[btree[[i]]], dmax,
-                          spread, projected, check_inputs = FALSE)
+                          spread, check_inputs = FALSE)
             }
         }
         # Calculate fetch for all points and return a (points x bearings) matrix
         fetch_res <- t(vapply(1:length(pts), fetch_i, rep(0, length(bearings))))
     } else { # method == "clip"
         # Clip shoreline to a merged buffer around all points
-        rect_buf <- rgeos::gUnaryUnion(rect_buf)
-        sub_shore <- rgeos::gIntersection(shoreline, rect_buf, byid = TRUE)
+        suppressMessages({
+            rect_buf <- st_union(rect_buf)
+            sub_shore <- st_intersection(shoreline, rect_buf)
+        })
         fetch_res <- t(
             vapply(1:length(pts),
                    function(i) fetch_len(pts[i], bearings, sub_shore, dmax,
-                                         spread, projected, check_inputs = FALSE),
+                                         spread, check_inputs = FALSE),
                    rep(0, length(bearings)))
         )
     }
@@ -239,53 +245,36 @@ fetch_len_multi <- function(pts, bearings, shoreline, dmax,
 
 #### Helper functions below are not exported by the package ####
 
-# Returns the distance from point p to shoreline
-# following bearing bear and up to distance dmax
-# all distances in projection units, or meters if projected = FALSE
-dist_shore <- function(p, shoreline, bear, dmax, projected) {
-    if (projected) {
-        # Draw line of length dmax with given start point and bearing
-        bline <- bearing_line(p, bear, dmax)
-        # Return (minimum) distance from p1 to intersection of geo_line and shoreline
-        # If no intersection, fetch is dmax
-        land_int <- rgeos::gIntersection(bline, shoreline)
-        if (is.null(land_int)) {
-            dmax
-        } else {
-            rgeos::gDistance(p, land_int)
-        }
-    } else {
+# Returns the distance from point p to shoreline following bearing bear and up to distance dmax
+# Uses the geodetic distance if in geographic coordinates,
+#   or the Euclidean distance if in projected coordinates
+dist_shore <- function(p, shoreline, bear, dmax) {
+    if (st_is_longlat(p)) {
         # Draw geodesic line of length dmax with given start point and bearing
         # Line drawn with a point every dmax/500
-        geo_line <- geosphere::gcIntermediate(p, geosphere::destPoint(p, bear, dmax),
-                     n = 500, sp = TRUE, breakAtDateLine = TRUE, addStartEnd = TRUE)
-        geo_line <- spTransform(geo_line, CRS(proj4string(shoreline)))
-        # Return (minimum) distance from p to intersection of geo_line and shoreline
-        # If no intersection, fetch is dmax
-        land_int <- rgeos::gIntersection(geo_line, shoreline)
-        if (is.null(land_int)) {
-            dmax
+        geo_line <- geosphere::gcIntermediate(st_coordinates(p),
+                                              geosphere::destPoint(st_coordinates(p), bear, dmax),
+                                              n = 500, breakAtDateLine = TRUE, addStartEnd = TRUE
+        )
+        if (is.list(geo_line)) {
+            geo_line <- st_multilinestring(geo_line)
         } else {
-            dist_min(p, land_int)
+            geo_line <- st_linestring(geo_line)
         }
-    }
-}
-
-# Returns the minimum distance between the focal point p and inters, the result
-#  of an intersection between SpatialLines which could include points and lines
-dist_min <- function(p, inters) {
-    if (class(inters) == "SpatialPoints") {
-        min(geosphere::distGeo(p, inters))
-    } else if (class(inters) == "SpatialLines") {
-        min(geosphere::distGeo(p, lines_to_endpts(inters)))
-    } else if (class(inters) == "SpatialCollections") {
-        coord_mat <- rbind(coordinates(inters@pointobj),
-                           coordinates(lines_to_endpts(inters@lineobj)))
-        min(geosphere::distGeo(p, coord_mat))
+        bline <- st_sfc(geo_line, crs = st_crs(shoreline))
     } else {
-        warning(paste("Point at", c(p[1], p[2]),
-                      "cannot calculate distance to shore, returning NA."))
-        NA
+        # Draw line of length dmax with given start point and bearing
+        bline <- bearing_line(p, bear, dmax)
     }
+    # Return (minimum) distance from p to intersection of bearing line and shoreline
+    # If no intersection, fetch is dmax
+    suppressMessages(
+        land_int <- st_intersection(bline, shoreline)
+    )
+    if (length(land_int) == 0) {
+        d <- dmax
+    } else {
+        d <- min(st_distance(p, land_int))
+    }
+    d
 }
-

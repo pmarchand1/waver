@@ -1,40 +1,49 @@
 library(waver)
-context("Fetch length")
+library(sp)
+context("Fetch length (sp version)")
 
 sf_use_s2(FALSE)
 
+poly_rect_sp <- function(xmin, ymin, xmax, ymax) {
+    Polygon(cbind(c(rep(xmin, 2), rep(xmax, 2), xmin),
+                  c(ymin, rep(ymax, 2), rep(ymin, 2))))
+}
+
 # Set up Spatial objects
-longlat <- st_crs("EPSG:4326")
-aeqd1 <- st_crs("ESRI:54032")
-aeqd2 <- st_crs("+proj=aeqd +lon_0=180 +lat_0=0")
+longlat <- "+proj=longlat +datum=WGS84"
+aeqd1 <-"+proj=aeqd +lon_0=0 +lat_0=0"
+aeqd2 <- "+proj=aeqd +lon_0=180 +lat_0=0"
 
 # p1 at (0,0)
-p1 <- st_sfc(st_point(c(0, 0)), crs = longlat)
-land1 <- st_sfc(waver:::poly_rect(-0.2, 0.25, 0.3, 0.5), crs = longlat)
-p1_df <- st_sf(v1 = 2, v2 = "a", p1)
-p1_prj <- st_transform(p1, aeqd1)
-land1_prj <- st_transform(land1, aeqd1)
+p1 <- SpatialPoints(matrix(c(0, 0), ncol = 2), proj4string = CRS(longlat))
+land1 <- SpatialPolygons(list(Polygons(list(
+    poly_rect_sp(-0.2, 0.25, 0.3, 0.5)), ID = 1)),
+    proj4string = CRS(longlat))
+p1_df <- SpatialPointsDataFrame(p1, data.frame(v1 = 2, v2 = "a"))
+p1_prj <- spTransform(p1, CRS(aeqd1))
+land1_prj <- spTransform(land1, CRS(aeqd1))
 
 # p2 near international date line
-p2 <- st_sfc(st_point(c(-179.75, 0)), crs = longlat)
-land2 <- st_sfc(list(
-    waver:::poly_rect(-179.95, 0.25, -179.45, 0.5),
-    waver:::poly_rect(179.7, -0.4, 179.95, 0.2)
-), crs = longlat)
-p2_prj <- st_transform(p2, aeqd2)
-land2_prj <- st_transform(land2, aeqd2)
+p2 <- SpatialPoints(matrix(c(-179.75, 0), ncol = 2), proj4string = CRS(longlat))
+land2 <- SpatialPolygons(list(
+    Polygons(list(poly_rect_sp(-179.95, 0.25, -179.45, 0.5)), ID = 2),
+    Polygons(list(poly_rect_sp(179.7, -0.4, 179.95, 0.2)), ID = 3)),
+    proj4string = CRS(longlat))
+p2_prj <- spTransform(p2, CRS(aeqd2))
+land2_prj <- spTransform(land2, CRS(aeqd2))
 
 # p3 on land1
-p3 <- st_sfc(st_point(c(0, 0.4)), crs = longlat)
-p3_prj <- st_transform(p3, aeqd1)
-p13 <- c(p1, p3)
-p13_prj <- st_transform(p13, aeqd1)
+p3 <- SpatialPoints(matrix(c(0, 0.4), ncol = 2), proj4string = CRS(longlat))
+p3_prj <- spTransform(p3, CRS(aeqd1))
+p13 <- rbind(p1, p3)
+p13_prj <- spTransform(p13, CRS(aeqd1))
 
 # Multiple points
-pts <- c(p1, p2, p3)
-lands <- c(land1, land2)
-pts_df <- st_sf(v1 = c(2, 5, 6), v2 = c("a", "e", "h"), pts)
-lands_df <- st_sf(v3 = c("s", "t", "u"), lands)
+pts <- rbind(p1, p2, p3)
+lands <- rbind(land1, land2)
+pts_df <- SpatialPointsDataFrame(pts,
+                                 data.frame(v1 = c(2, 5, 6), v2 = c("a", "e", "h")))
+lands_df <- SpatialPolygonsDataFrame(lands, data.frame(v3 = c("s", "t", "u")))
 
 # Fetch parameters
 bearings <- c(0, 45, 225, 315)
@@ -54,13 +63,13 @@ test_that("fetch_len correct for single point", {
     expect_equal(fetch_len(p1, bearings, land1, dmax), fexp1, tolerance = tol)
     expect_equal(fetch_len(p1, bearings, land1, dmax, spread),
                  fexp1spr, tolerance = tol)
-    expect_equal(fetch_len(p1, bearings, st_cast(land1, "LINESTRING"), dmax),
+    expect_equal(fetch_len(p1, bearings, as(land1, "SpatialLines"), dmax),
                  fexp1, tolerance = tol)
     expect_equal(fetch_len(p1_prj, bearings, land1_prj, dmax),
                  fexp1, tolerance = tol)
     expect_equal(fetch_len(p1_prj, bearings, land1_prj, dmax, spread),
                  fexp1spr, tolerance = tol)
-    expect_equal(fetch_len(p1_prj, bearings, st_cast(land1_prj, "LINESTRING"), dmax),
+    expect_equal(fetch_len(p1_prj, bearings, as(land1_prj, "SpatialLines"), dmax),
                  fexp1, tolerance = tol)
 })
 
@@ -114,7 +123,7 @@ test_that("fetch_len fails on bad inputs", {
     expect_error(fetch_len(p1, bearings, p1, dmax), "lines or polygons")
     expect_error(fetch_len(p1_prj, bearings, land1, dmax), "projections")
     expect_error(fetch_len(p1, bearings, land1_prj, dmax), "projections")
-    expect_error(fetch_len(p1_prj, bearings, st_transform(land1, aeqd2),
+    expect_error(fetch_len(p1_prj, bearings, spTransform(land1, CRS(aeqd2)),
                            dmax), "projections")
     expect_error(fetch_len(p1, "a", land1, dmax), "bearings")
     expect_error(fetch_len(p1, bearings, land1, dmax, "a"), "spread")

@@ -1,7 +1,7 @@
 Package: waver
 Type: Package
 Title: Calculate Fetch and Wave Energy
-Version: 0.2.1
+Version: 0.3.0
 Description: Functions for calculating the
     fetch (length of open water distance along given directions)
     and estimating wave energy from wind and wave monitoring data.
@@ -12,14 +12,15 @@ Authors@R: c(person('Philippe', 'Marchand', email = 'marchand.philippe@gmail.com
                   role = c('aut', 'cre')),
              person('David', 'Gill', role = 'aut'))
 Depends:
-    R (>= 3.2.2),
-    rgdal (>= 0.8),
-    sp (>= 1.1)
+    R (>= 4.0),
+    sf (>= 1.0)
 Imports:
     geosphere (>= 1.5),
-    methods,
-    rgeos (>= 0.3)
+    methods
 LazyData: TRUE
 Suggests:
+    lwgeom,
+    sp,
     testthat
-RoxygenNote: 6.0.1
+Encoding: UTF-8
+RoxygenNote: 7.2.3
